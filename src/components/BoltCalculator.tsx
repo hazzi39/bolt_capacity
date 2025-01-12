@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, Save } from 'lucide-react';
+import { Calculator, Save, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import TooltipLabel from './TooltipLabel';
 import CalculationDetails from './CalculationDetails';
 import { BOLT_PROPERTIES, calculateKr, calculateAreas, calculateBoltShearCapacity, calculateBoltTensileCapacity } from '../utils/calculations';
@@ -36,7 +36,7 @@ export default function BoltCalculator() {
   });
 
   const [savedCalculations, setSavedCalculations] = useState<SavedCalculation[]>([]);
-  const [showTable, setShowTable] = useState(false);
+  const [showSavedResults, setShowSavedResults] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isCalculating, setIsCalculating] = useState(false);
 
@@ -104,12 +104,37 @@ export default function BoltCalculator() {
   const saveCalculation = () => {
     const newCalculation: SavedCalculation = {
       id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toLocaleString(),
       inputs: { ...inputs },
       results: { ...results },
     };
 
     setSavedCalculations(prev => [newCalculation, ...prev]);
+    setShowSavedResults(true);
+  };
+
+  const exportResults = () => {
+    const csvContent = [
+      ['Timestamp', 'Bolt Grade', 'Diameter (mm)', 'Threaded Length (mm)', 'Threaded Shear Planes', 'Unthreaded Shear Planes', 'Shear Capacity (kN)', 'Tensile Capacity (kN)'],
+      ...savedCalculations.map(calc => [
+        calc.timestamp,
+        calc.inputs.boltGrade,
+        calc.inputs.diameter,
+        calc.inputs.threadedLength,
+        calc.inputs.shearPlanes,
+        calc.inputs.unthreadedShearPlanes,
+        formatNumber(calc.results.shearCapacity),
+        formatNumber(calc.results.tensileCapacity)
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bolt-calculations.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -270,19 +295,70 @@ export default function BoltCalculator() {
                   kr={calculateKr(inputs.threadedLength)}
                   fuf={BOLT_PROPERTIES[inputs.boltGrade as keyof typeof BOLT_PROPERTIES].fuf}
                 />
+
+                <div className="mt-4 flex justify-end space-x-3">
+                  <button
+                    onClick={saveCalculation}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Results
+                  </button>
+                </div>
               </>
             )}
-
-            <div className="mt-4 flex justify-end space-x-3">
-              <button
-                onClick={saveCalculation}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save Results
-              </button>
-            </div>
           </div>
+
+          {/* Saved Results Section */}
+          {savedCalculations.length > 0 && (
+            <div className="border-t border-gray-200">
+              <button
+                onClick={() => setShowSavedResults(!showSavedResults)}
+                className="w-full px-6 py-3 flex items-center justify-between text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span>Saved Calculations ({savedCalculations.length})</span>
+                {showSavedResults ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </button>
+              
+              {showSavedResults && (
+                <div className="px-6 py-4">
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={exportResults}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export to CSV
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diameter</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shear Cap.</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tensile Cap.</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {savedCalculations.map((calc) => (
+                          <tr key={calc.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{calc.timestamp}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{calc.inputs.boltGrade}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{calc.inputs.diameter} mm</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatNumber(calc.results.shearCapacity)} kN</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatNumber(calc.results.tensileCapacity)} kN</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
