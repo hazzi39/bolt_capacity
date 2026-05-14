@@ -18,6 +18,18 @@ export interface BoltSpec {
   washerMinThickness: number;
 }
 
+export interface BoltDerivedMetrics {
+  diameter: number;
+  reductionFactor: number;
+  shearFactor: number;
+  nominalShearCapacity: number;
+  nominalTensionCapacity: number;
+  shearToTensionRatio: number;
+}
+
+export const BOLT_CAPACITY_REDUCTION_FACTOR = 0.8;
+export const BOLT_SHEAR_FACTOR = 0.62;
+
 export const boltData: BoltSpec[] = [
   {
     "boltGrade": "Grade 4.6",
@@ -489,4 +501,23 @@ export const getBoltSizes = (grade: string): string[] => {
 
 export const getBoltSpec = (grade: string, size: string): BoltSpec | undefined => {
   return boltData.find(bolt => bolt.boltGrade === grade && bolt.boltSize === size);
+};
+
+export const parseBoltDiameter = (boltSize: string): number => {
+  const match = boltSize.match(/\d+/);
+  return match ? Number(match[0]) : 0;
+};
+
+export const getBoltDerivedMetrics = (bolt: BoltSpec): BoltDerivedMetrics => {
+  const nominalTensionCapacity = bolt.phiNtf / BOLT_CAPACITY_REDUCTION_FACTOR;
+  const nominalShearCapacity = bolt.phiVf / BOLT_CAPACITY_REDUCTION_FACTOR;
+
+  return {
+    diameter: parseBoltDiameter(bolt.boltSize),
+    reductionFactor: BOLT_CAPACITY_REDUCTION_FACTOR,
+    shearFactor: BOLT_SHEAR_FACTOR,
+    nominalShearCapacity,
+    nominalTensionCapacity,
+    shearToTensionRatio: nominalTensionCapacity === 0 ? 0 : nominalShearCapacity / nominalTensionCapacity,
+  };
 };
