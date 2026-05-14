@@ -559,6 +559,16 @@ select {
   transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
 }
 
+.action-button-group {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.action-button-group .save-button {
+  margin-top: 0;
+}
+
 .save-button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(21, 112, 239, 0.28);
@@ -573,6 +583,39 @@ select {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  border: 1px solid rgba(21, 112, 239, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--accent-strong);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), background-color var(--transition);
+}
+
+.export-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(21, 112, 239, 0.32);
+  background: rgba(244, 249, 255, 0.96);
+}
+
+.export-button:focus-visible {
+  outline: 3px solid rgba(21, 112, 239, 0.18);
+  outline-offset: 3px;
+}
+
+.export-button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
 .properties-grid {

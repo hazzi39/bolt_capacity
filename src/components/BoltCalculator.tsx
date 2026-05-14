@@ -1,7 +1,7 @@
 import { startTransition, useDeferredValue, useState } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { BookmarkPlus, Gauge, Ruler, ShieldCheck } from 'lucide-react';
+import { BookmarkPlus, FileDown, Gauge, Ruler, ShieldCheck } from 'lucide-react';
 import {
   getBoltDerivedMetrics,
   getBoltGrades,
@@ -10,21 +10,11 @@ import {
   type BoltDerivedMetrics,
   type BoltSpec,
 } from '../data/bolts';
+import type { SavedResultRow } from '../utils/reportExport';
 
 interface ValidationState {
   grade?: string;
   size?: string;
-}
-
-interface SavedResultRow {
-  id: number;
-  boltGrade: string;
-  boltSize: string;
-  phiVf: number;
-  phiNtf: number;
-  minimumPitch: number;
-  minEdgeDistanceShear: number;
-  timestamp: string;
 }
 
 interface EquationBlockProps {
@@ -197,6 +187,7 @@ const BoltCalculator = () => {
   const [selectedGrade, setSelectedGrade] = useState('Grade 8.8');
   const [selectedSize, setSelectedSize] = useState('M20');
   const [savedResults, setSavedResults] = useState<SavedResultRow[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const boltGrades = getBoltGrades();
   const boltSizes = selectedGrade ? getBoltSizes(selectedGrade) : [];
@@ -237,6 +228,27 @@ const BoltCalculator = () => {
     startTransition(() => {
       setSavedResults((currentRows) => [entry, ...currentRows]);
     });
+  };
+
+  const handleExportReport = async () => {
+    if (!deferredBolt || !derivedMetrics || isExporting) {
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const reportModule = await import('../utils/reportExport');
+      const reportData = reportModule.buildCalculationReportData({
+        boltSpec: deferredBolt,
+        derivedMetrics,
+        savedResults,
+      });
+
+      await reportModule.exportWordReport(reportData);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -392,15 +404,26 @@ const BoltCalculator = () => {
               />
             </div>
 
-            <button
-              type="button"
-              className="save-button"
-              onClick={handleSaveResult}
-              disabled={!isValidSelection}
-            >
-              <BookmarkPlus size={18} />
-              <span>Save Result</span>
-            </button>
+            <div className="action-button-group">
+              <button
+                type="button"
+                className="save-button"
+                onClick={handleSaveResult}
+                disabled={!isValidSelection}
+              >
+                <BookmarkPlus size={18} />
+                <span>Save Result</span>
+              </button>
+              <button
+                type="button"
+                className="export-button"
+                onClick={handleExportReport}
+                disabled={!isValidSelection || isExporting}
+              >
+                <FileDown size={18} />
+                <span>{isExporting ? 'Exporting Report...' : 'Export Word Report'}</span>
+              </button>
+            </div>
           </article>
 
           <article className="card properties-card">
